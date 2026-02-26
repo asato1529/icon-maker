@@ -44,7 +44,7 @@ body{
   font-size:18px;
 }
 
-/* ===== メインコンテナ ===== */
+/* ===== メイン ===== */
 .container{
   width:100%;
   max-width:420px;
@@ -94,19 +94,17 @@ button{
   background:linear-gradient(135deg,#4facfe,#00f2fe);
   color:white;
   cursor:pointer;
-  transition:0.2s;
 }
 
-button:hover{
-  opacity:0.9;
+button:active{
+  transform:scale(0.98);
 }
 
-/* ===== キャンバス非表示 ===== */
+/* ===== 非表示 ===== */
 canvas{
   display:none;
 }
 
-/* ===== プレビュー ===== */
 video{
   margin-top:30px;
   border-radius:16px;
@@ -118,7 +116,6 @@ video{
 
 <body>
 
-<!-- ヘッダー -->
 <div class="header">
   <img src="icon.PNG" class="logo">
   <div class="title">ICON MAKER</div>
@@ -126,12 +123,12 @@ video{
 
 <div class="container">
 
-  <!-- 円選択UI -->
-  <label class="circle-picker">
+  <div class="circle-picker" id="openPicker">
     ＋ 画像を選択
     <span>（最大12枚）</span>
-    <input id="picker" type="file" multiple accept="image/*" hidden>
-  </label>
+  </div>
+
+  <input id="picker" type="file" multiple accept="image/*" style="display:none;">
 
   <button id="start">動画を作成</button>
 
@@ -142,10 +139,14 @@ video{
 </div>
 
 <script>
+document.addEventListener("DOMContentLoaded", ()=>{
+
 const c=document.getElementById("c");
 const ctx=c.getContext("2d");
 const picker=document.getElementById("picker");
 const start=document.getElementById("start");
+const preview=document.getElementById("preview");
+const openPicker=document.getElementById("openPicker");
 
 const MAX=12;
 const INTERVAL=60;
@@ -165,12 +166,21 @@ let spawnIndex=0;
 let playing=false;
 let finalTimer=0;
 
+/* 円タップでファイル選択 */
+openPicker.onclick=()=>{
+  picker.click();
+};
+
 picker.onchange=e=>{
   raw=[];
   for(const f of e.target.files){
     const im=new Image();
     im.src=URL.createObjectURL(f);
     raw.push(im);
+  }
+
+  if(raw.length>0){
+    openPicker.innerHTML="画像 "+raw.length+" 枚選択済み";
   }
 
   pool=[];
@@ -275,7 +285,10 @@ update();
 let recorder,chunks=[];
 
 start.onclick=()=>{
-  if(raw.length===0) return alert("画像を選択してください");
+  if(raw.length===0){
+    alert("画像を選択してください");
+    return;
+  }
 
   layers=[];
   spawnIndex=0;
@@ -285,8 +298,7 @@ start.onclick=()=>{
   spawn();
 
   chunks=[];
-  const v=document.getElementById("preview");
-  v.style.display="none";
+  preview.style.display="none";
 
   recorder=new MediaRecorder(c.captureStream(60));
   recorder.ondataavailable=e=>chunks.push(e.data);
@@ -294,9 +306,9 @@ start.onclick=()=>{
   recorder.onstop=()=>{
     const blob=new Blob(chunks,{type:recorder.mimeType});
     const url=URL.createObjectURL(blob);
-    v.src=url;
-    v.style.display="block";
-    v.play();
+    preview.src=url;
+    preview.style.display="block";
+    preview.play();
 
     const a=document.createElement("a");
     a.href=url;
@@ -308,6 +320,8 @@ start.onclick=()=>{
 
   recorder.start();
 };
+
+});
 </script>
 
 </body>
