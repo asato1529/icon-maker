@@ -2,7 +2,9 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>TikTok Circle Preview Only</title>
+<title>TikTok Circle iPhone Complete</title>
+
+<script src="https://cdn.jsdelivr.net/npm/ccapture.js@1.1.0/build/CCapture.all.min.js"></script>
 
 <style>
 body{
@@ -16,11 +18,6 @@ body{
 }
 canvas{margin-top:10px}
 button{margin:6px;padding:8px 16px;font-size:14px}
-video{
-  margin-top:10px;
-  border:1px solid #333;
-  max-width:90%;
-}
 </style>
 </head>
 
@@ -28,10 +25,9 @@ video{
 
 <input id="picker" type="file" multiple accept="image/*">
 <button id="start">作成</button>
+<button id="save" style="display:none">保存</button>
 
 <canvas id="c" width="400" height="400"></canvas>
-
-<video id="preview" controls playsinline style="display:none"></video>
 
 <script>
 const c=document.getElementById("c");
@@ -55,6 +51,9 @@ let spawnIndex=0;
 let playing=false;
 let finalTimer=0;
 
+let capturer;
+let finished=false;
+
 picker.onchange=e=>{
   raw=[];
   for(const f of e.target.files){
@@ -71,12 +70,14 @@ picker.onchange=e=>{
   frame=0;
   finalTimer=0;
   playing=false;
+  finished=false;
 };
 
 function draw(img,x,y,r,imgS,ringS){
   ctx.save();
   ctx.translate(x,y);
   ctx.rotate(r);
+
   ctx.beginPath();
   ctx.arc(0,0,160*ringS,0,Math.PI*2);
   ctx.clip();
@@ -149,7 +150,9 @@ function update(){
 
         if(finalTimer>FINAL_FRAMES){
           playing=false;
-          if(recorder) recorder.stop();
+          finished=true;
+          capturer.stop();
+          document.getElementById("save").style.display="inline-block";
         }
       }
     }
@@ -157,38 +160,40 @@ function update(){
     draw(L.img,cx,cy,L.rot,L.imgScale,L.ringScale);
   });
 
+  if(playing && capturer){
+    capturer.capture(c);
+  }
+
   requestAnimationFrame(update);
 }
 
 update();
 
-// ===== 録画（再生用のみ） =====
-let recorder,chunks=[];
-
 start.onclick=()=>{
+  if(raw.length===0) return alert("画像を選んでください");
+
   layers=[];
   spawnIndex=0;
   frame=0;
   finalTimer=0;
   playing=true;
+  finished=false;
   spawn();
 
-  chunks=[];
-  const v=document.getElementById("preview");
-  v.style.display="none";
+  document.getElementById("save").style.display="none";
 
-  recorder=new MediaRecorder(c.captureStream(60));
-  recorder.ondataavailable=e=>chunks.push(e.data);
+  capturer = new CCapture({
+    format: 'webm',
+    framerate: 60
+  });
 
-  recorder.onstop=()=>{
-    const blob=new Blob(chunks,{type:recorder.mimeType});
-    const url=URL.createObjectURL(blob);
-    v.src=url;
-    v.style.display="block";
-    v.play();
-  };
+  capturer.start();
+};
 
-  recorder.start();
+document.getElementById("save").onclick=()=>{
+  if(finished && capturer){
+    capturer.save();
+  }
 };
 </script>
 
