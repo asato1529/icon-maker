@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>TikTok Circle Preview Only</title>
+
+<style>
+body{
+  margin:0;
+  background:black;
+  color:white;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  font-family:sans-serif;
+}
+canvas{margin-top:10px}
+button{margin:6px;padding:8px 16px;font-size:14px}
+video{
+  margin-top:10px;
+  border:1px solid #333;
+  max-width:90%;
+}
+</style>
+</head>
+
+<body>
+
+<input id="picker" type="file" multiple accept="image/*">
+<button id="start">作成</button>
+
+<canvas id="c" width="400" height="400"></canvas>
+
+<video id="preview" controls playsinline style="display:none"></video>
+
+<script>
+const c=document.getElementById("c");
+const ctx=c.getContext("2d");
+
+const MAX=12;
+const INTERVAL=60;
+const FINAL_FRAMES=180;
+
+const corners=[
+  {x:-1,y:1},
+  {x:-1,y:-1},
+  {x:1,y:-1},
+  {x:1,y:1}
+];
+
+let raw=[],pool=[];
+let layers=[];
+let frame=0;
+let spawnIndex=0;
+let playing=false;
+let finalTimer=0;
+
+picker.onchange=e=>{
+  raw=[];
+  for(const f of e.target.files){
+    const im=new Image();
+    im.src=URL.createObjectURL(f);
+    raw.push(im);
+  }
+
+  pool=[];
+  for(let i=0;i<MAX;i++) pool.push(raw[i%raw.length]);
+
+  layers=[];
+  spawnIndex=0;
+  frame=0;
+  finalTimer=0;
+  playing=false;
+};
+
+function draw(img,x,y,r,imgS,ringS){
+  ctx.save();
+  ctx.translate(x,y);
+  ctx.rotate(r);
+  ctx.beginPath();
+  ctx.arc(0,0,160*ringS,0,Math.PI*2);
+  ctx.clip();
+
+  const sz=Math.min(img.width,img.height);
+  ctx.drawImage(
+    img,
+    (img.width-sz)/2,
+    (img.height-sz)/2,
+    sz,sz,
+    -200*imgS,-200*imgS,400*imgS,400*imgS
+  );
+
+  ctx.restore();
+}
+
+function spawn(){
+  let pos=spawnIndex==0?{x:0,y:0}:corners[(spawnIndex-1)%corners.length];
+
+  layers.push({
+    img:pool[spawnIndex],
+    t:0,
+    x:pos.x*200,
+    y:pos.y*200,
+    rot:spawnIndex==0?0:(spawnIndex==MAX-1?1.0:0.9),
+    imgScale:0.4,
+    ringScale:0.4,
+    final:spawnIndex==MAX-1
+  });
+
+  spawnIndex++;
+}
+
+function update(){
+  if(!playing){requestAnimationFrame(update);return;}
+
+  frame++;
+  if(spawnIndex<MAX && frame%INTERVAL==0) spawn();
+
+  ctx.clearRect(0,0,400,400);
+
+  layers.forEach(L=>{
+    L.t+=0.015;
+    let p=Math.min(L.t,1);
+
+    let cx=200+L.x*(1-p);
+    let cy=200+L.y*(1-p);
+
+    L.imgScale+=0.003;
+    L.ringScale+=0.005;
+
+    if(!L.final){
+      L.rot-=0.008;
+    }else{
+      if(p<1){
+        L.rot-=0.008;
+      }else{
+        finalTimer++;
+
+        if(L.rot>0){
+          L.rot-=0.01;
+          if(L.rot<0) L.rot=0;
+        }else if(L.rot<0){
+          L.rot+=0.01;
+          if(L.rot>0) L.rot=0;
+        }
+
+        L.imgScale+=0.004;
+        L.ringScale+=0.007;
+
+        if(finalTimer>FINAL_FRAMES){
+          playing=false;
+          if(recorder) recorder.stop();
+        }
+      }
+    }
+
+    draw(L.img,cx,cy,L.rot,L.imgScale,L.ringScale);
+  });
+
+  requestAnimationFrame(update);
+}
+
+update();
+
+// ===== 録画（再生用のみ） =====
+let recorder,chunks=[];
+
+start.onclick=()=>{
+  layers=[];
+  spawnIndex=0;
+  frame=0;
+  finalTimer=0;
+  playing=true;
+  spawn();
+
+  chunks=[];
+  const v=document.getElementById("preview");
+  v.style.display="none";
+
+  recorder=new MediaRecorder(c.captureStream(60));
+  recorder.ondataavailable=e=>chunks.push(e.data);
+
+  recorder.onstop=()=>{
+    const blob=new Blob(chunks,{type:recorder.mimeType});
+    const url=URL.createObjectURL(blob);
+    v.src=url;
+    v.style.display="block";
+    v.play();
+  };
+
+  recorder.start();
+};
+</script>
+
+</body>
+</html>
