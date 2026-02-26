@@ -1,47 +1,151 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>icon-maker</title>
 
 <link rel="apple-touch-icon" href="icon.PNG">
 <link rel="icon" href="icon.PNG">
 
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 
 <style>
 body{
   margin:0;
-  background:black;
-  color:white;
+  background:#ffffff;
+  font-family:-apple-system,BlinkMacSystemFont,sans-serif;
+  color:#111;
   display:flex;
   flex-direction:column;
   align-items:center;
-  font-family:sans-serif;
 }
-canvas{margin-top:10px}
-button{margin:6px;padding:8px 16px;font-size:14px}
+
+/* ===== ヘッダー ===== */
+.header{
+  width:100%;
+  display:flex;
+  align-items:center;
+  padding:16px;
+  box-sizing:border-box;
+}
+
+.logo{
+  width:34px;
+  height:34px;
+  border-radius:8px;
+  object-fit:cover;
+  margin-right:10px;
+}
+
+.title{
+  font-weight:600;
+  font-size:18px;
+}
+
+/* ===== メインコンテナ ===== */
+.container{
+  width:100%;
+  max-width:420px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding:20px;
+  box-sizing:border-box;
+}
+
+/* ===== 円選択UI ===== */
+.circle-picker{
+  width:260px;
+  height:260px;
+  border-radius:50%;
+  border:2px dashed #ccc;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  color:#888;
+  text-align:center;
+  cursor:pointer;
+  transition:0.3s;
+  margin-top:30px;
+}
+
+.circle-picker:hover{
+  border-color:#4facfe;
+  color:#4facfe;
+}
+
+.circle-picker span{
+  font-size:14px;
+  margin-top:6px;
+}
+
+/* ===== ボタン ===== */
+button{
+  margin-top:30px;
+  width:220px;
+  height:48px;
+  border:none;
+  border-radius:24px;
+  font-size:16px;
+  font-weight:600;
+  background:linear-gradient(135deg,#4facfe,#00f2fe);
+  color:white;
+  cursor:pointer;
+  transition:0.2s;
+}
+
+button:hover{
+  opacity:0.9;
+}
+
+/* ===== キャンバス非表示 ===== */
+canvas{
+  display:none;
+}
+
+/* ===== プレビュー ===== */
 video{
-  margin-top:10px;
-  border:1px solid #333;
-  max-width:90%;
+  margin-top:30px;
+  border-radius:16px;
+  max-width:100%;
+  display:none;
 }
 </style>
 </head>
 
 <body>
 
-<input id="picker" type="file" multiple accept="image/*">
-<button id="start">作成</button>
+<!-- ヘッダー -->
+<div class="header">
+  <img src="icon.PNG" class="logo">
+  <div class="title">ICON MAKER</div>
+</div>
 
-<canvas id="c" width="400" height="400"></canvas>
+<div class="container">
 
-<video id="preview" controls playsinline style="display:none"></video>
+  <!-- 円選択UI -->
+  <label class="circle-picker">
+    ＋ 画像を選択
+    <span>（最大12枚）</span>
+    <input id="picker" type="file" multiple accept="image/*" hidden>
+  </label>
+
+  <button id="start">動画を作成</button>
+
+  <canvas id="c" width="400" height="400"></canvas>
+
+  <video id="preview" controls playsinline></video>
+
+</div>
 
 <script>
 const c=document.getElementById("c");
 const ctx=c.getContext("2d");
+const picker=document.getElementById("picker");
+const start=document.getElementById("start");
 
 const MAX=12;
 const INTERVAL=60;
@@ -168,10 +272,11 @@ function update(){
 
 update();
 
-// ===== 録画（再生用のみ） =====
 let recorder,chunks=[];
 
 start.onclick=()=>{
+  if(raw.length===0) return alert("画像を選択してください");
+
   layers=[];
   spawnIndex=0;
   frame=0;
@@ -194,11 +299,11 @@ start.onclick=()=>{
     v.play();
 
     const a=document.createElement("a");
-a.href=url;
-a.download="circle.mp4";
-document.body.appendChild(a);
-a.click();
-document.body.removeChild(a);
+    a.href=url;
+    a.download="circle.mp4";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
   recorder.start();
