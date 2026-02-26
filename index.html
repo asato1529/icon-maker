@@ -186,6 +186,13 @@ start.onclick=()=>{
     v.src=url;
     v.style.display="block";
     v.play();
+
+    const a=document.createElement("a");
+a.href=url;
+a.download="circle.mp4";
+document.body.appendChild(a);
+a.click();
+document.body.removeChild(a);
   };
 
   recorder.start();
